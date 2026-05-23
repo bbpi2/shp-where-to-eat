@@ -42,9 +42,9 @@ ul.task-list li input[type="checkbox"] {
 <link href="site_libs/bootstrap/bootstrap-a477657325890aba014b068b065ea95d.min.css" rel="stylesheet" append-hash="true" class="quarto-color-scheme" id="quarto-bootstrap" data-mode="light">
 <link href="site_libs/bootstrap/bootstrap-dark-1d679273cf6d8ab4a6fb44fbc2f5c50a.min.css" rel="prefetch" append-hash="true" class="quarto-color-scheme quarto-color-alternate" id="quarto-bootstrap" data-mode="dark">
 <meta name="shinylive:serviceworker_dir" content=".">
-<script src="site_libs/quarto-contrib/shinylive-0.10.4/shinylive/load-shinylive-sw.js" type="module"></script>
-<script src="site_libs/quarto-contrib/shinylive-0.10.4/shinylive/run-python-blocks.js" type="module"></script>
-<link href="site_libs/quarto-contrib/shinylive-0.10.4/shinylive/shinylive.css" rel="stylesheet">
+<script src="site_libs/quarto-contrib/shinylive-0.10.10/shinylive/load-shinylive-sw.js" type="module"></script>
+<script src="site_libs/quarto-contrib/shinylive-0.10.10/shinylive/run-python-blocks.js" type="module"></script>
+<link href="site_libs/quarto-contrib/shinylive-0.10.10/shinylive/shinylive.css" rel="stylesheet">
 <link href="site_libs/quarto-contrib/shinylive-quarto-css/shinylive-quarto.css" rel="stylesheet">
 <script id="quarto-search-options" type="application/json">{
   "location": "navbar",
@@ -148,23 +148,39 @@ import random
 
 # Load CSV once at startup
 df = pd.read_csv(open_url('https://raw.githubusercontent.com/bbpi2/shp-where-to-eat/refs/heads/main/data/restaurants.csv'))
-print(df)
-# xx = df['cuisine'].unique()
+cuisines = df['cuisine'].unique().tolist()
+closing_times = ["early", "9:00", "9:30", "10:00", "late"]
 
-
-app_ui = ui.page_fluid(
-    ui.h2("Random Restaurant Selector"),
-    ui.input_action_button("go", "Pick a Restaurant"),
-    ui.output_text_verbatim("result")
+app_ui = ui.page_fillable(
+      ui.card(
+        ui.card_header("Pick a cuisine"),
+        ui.card_body(
+          ui.input_checkbox_group("selected_cuisines", "", cuisines, selected=cuisines)
+        ),
+        fill=False
+      ),
+      ui.card(
+        ui.input_action_button("go", "Pick a Restaurant"),
+        fill=False
+      ),
+      # ui.input_action_button("go", "Pick a Restaurant"),
+      ui.output_text_verbatim("result")
 )
 
 def server(input, output, session):
     @reactive.Calc
     @reactive.event(input.go)
     def pick_restaurant():
-        idx = random.randrange(len(df))
-        row = df.iloc[idx]
+        cuisine_filter = input.selected_cuisines()
+        df_selected = df.query('cuisine in @cuisine_filter')
+        idx = random.randrange(len(df_selected))
+        row = df_selected.iloc[idx]
         return row.to_string()
+
+    @output
+    @render.text
+    def result():
+        return pick_restaurant()
 
     @output
     @render.text
